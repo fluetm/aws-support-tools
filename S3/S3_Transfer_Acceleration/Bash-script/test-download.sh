@@ -44,7 +44,7 @@ if [ "${nanos_test%N}" != "$nanos_test" ]; then
     } >&2
 fi
 
-filename="matt-256mb.kdb"
+filename="matt-download.kdb"
 s3_filename="mjf/destination.kdb"
 bucketname="mjf-vector-test"
 region="us-east-1"
@@ -55,25 +55,25 @@ region="us-east-1"
 #read -p "Enter the name of the bucket: " bucketname
 #read -p "Enter the region of your Bucket (e.g. us-west-2): " region
 
-use_acceleration=$(readyn 'Do you want to upload via Transfer Acceleration: (y/n)')
+use_acceleration=$(readyn 'Do you want to download via Transfer Acceleration: (y/n)')
 
-filesize="$(wc -c <"$filename")"
 starttime=$(date +"%s.%N")
 if $use_acceleration; then
     # Uploading the file to the S3 Bucket using Transfer Acceleration.
     use_acceleration_str="with acceleration"
     aws configure set s3.addressing_style virtual
-    aws s3 cp "$filename" "s3://$bucketname/$s3_filename" --region "$region" --endpoint-url http://s3-accelerate.amazonaws.com
+    aws s3api get-object --bucket "$bucketname" --key "$s3_filename" "$filename" --region "$region" --endpoint-url http://s3-accelerate.amazonaws.com
 else
     # Uploading the file to the S3 Bucket via a Direct upload.
     use_acceleration_str="without acceleration"
-    aws s3 cp "$filename" "s3://$bucketname/$s3_filename" --region "$region"
+    aws s3api get-object --bucket "$bucketname" --key "$s3_filename" "$filename" --region "$region"
 fi
+filesize="$(wc -c <"$filename")"
 endtime=$(date +"%s.%N")
 time_elapsed=$(calc "$endtime-$starttime")
 throughput=$(calc "$filesize*8/$time_elapsed")
 throughput_in_mbps=$(calc "$throughput/(1024*1024)")
-echo "File uploaded $use_acceleration_str took $time_elapsed sec at $throughput_in_mbps Mbps speed."
+echo "File downloaded $use_acceleration_str took $time_elapsed sec at $throughput_in_mbps Mbps speed."
 
 delete_file=$(readyn 'Do you want to delete the uploaded file: (y/n)')
 if $delete_file; then
